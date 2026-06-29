@@ -32,6 +32,26 @@ reason so you can see the logic and overrule it:
 > No source publishes a full hero-vs-hero win-rate *matrix* — that part is kit-design
 > knowledge. The tier/win/pick numbers are the published hard data and are cited in-app.
 
+## 📷 Photo scan (Google Gemini)
+
+Tap **Scan screenshot** to auto-fill both teams from a screenshot (best: the in-match
+scoreboard / Tab view, which shows both teams). The image is resized in-browser, sent to
+Google Gemini with our exact roster + map list so it normalizes to our spelling, then heroes
+are slotted by role. A **⇄ Swap** button flips which team is enemy vs. yours; any name it
+couldn't match is flagged so you can set it by hand.
+
+**Setup:** tap ⚙ → paste a free Gemini key from <https://aistudio.google.com/apikey>.
+
+- The key is stored **only in this browser** (`localStorage` keys `cw_gem_key` / `cw_gem_model`)
+  — never in the repo. Set a usage limit in Google AI Studio and rotate the key if it leaks.
+- Default model `gemini-2.5-flash` (editable). Gemini's free tier covers personal use; cost
+  otherwise is a fraction of a cent per scan.
+- **Caveat:** vision models don't reliably recognize the brand-new 2026 heroes by portrait —
+  verify those slots. Scan is a fast first pass; the picker is the source of truth.
+- **If a scan shows a CORS / network error:** the browser→Gemini direct call was blocked on
+  your network. Fix is a tiny serverless proxy (Cloudflare Worker) holding the key — ask and
+  it's ~20 lines. Everything else in the app keeps working regardless.
+
 ## Updating it as patches land
 
 All data lives at the top of the `<script>` in `index.html`:
