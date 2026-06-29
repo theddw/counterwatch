@@ -82,6 +82,8 @@
   .panel.enemy h2{color:#ff9aa0;border-bottom-color:#542731}
   .panel.mine h2{color:#9fd0ff;border-bottom-color:#26405a}
   .panel h2 .tag{margin-left:auto;font-family:var(--num);color:var(--muted);font-size:.85rem;letter-spacing:1px;font-weight:600}
+  .panel h2 .clearbtn{margin-left:9px;border:1px solid var(--line2);background:linear-gradient(180deg,#1b2536,#121a27);color:var(--muted);font-family:var(--disp);font-weight:700;font-size:.6rem;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:4px;cursor:pointer}
+  .panel.enemy h2 .clearbtn{border-color:#542731;color:#ff9aa0} .panel.mine h2 .clearbtn{border-color:#26405a;color:#9fd0ff}
 
   .slots{display:flex;flex-wrap:wrap;gap:7px}
   .slot{flex:1 1 calc(50% - 4px);min-width:135px;display:flex;align-items:center;gap:8px;
@@ -206,12 +208,12 @@
   </div>
 
   <div class="panel enemy">
-    <h2>ENEMY TEAM <span class="tag" id="enemyCount"></span></h2>
+    <h2>ENEMY TEAM <span class="tag" id="enemyCount"></span><button class="clearbtn" id="enemyClearBtn">Clear</button></h2>
     <div class="slots" id="enemySlots"></div>
   </div>
 
   <div class="panel mine">
-    <h2>YOUR TEAM <span class="tag" id="myCount"></span></h2>
+    <h2>YOUR TEAM <span class="tag" id="myCount"></span><button class="clearbtn" id="myClearBtn">Clear</button></h2>
     <div class="slots" id="mySlots"></div>
   </div>
 
@@ -624,6 +626,9 @@ document.querySelectorAll('#role button').forEach(b=>b.onclick=()=>{state.myRole
 document.getElementById('closeModal').onclick=closePicker;
 document.getElementById('modal').onclick=(e)=>{if(e.target.id==='modal')closePicker();};
 document.getElementById('search').oninput=(e)=>renderPickList(e.target.value);
+function clearTeam(team){ state[team]=SLOTS[state.fmt].map(r=>({role:r,hero:null})); renderAll(); }
+document.getElementById('enemyClearBtn').onclick=()=>clearTeam('enemy');
+document.getElementById('myClearBtn').onclick=()=>clearTeam('mine');
 
 buildMapSelect();
 renderAll();
