@@ -1,0 +1,7 @@
+# Local tooling / preview config (machine-specific paths)
+.claude/
+
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini

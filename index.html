@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>COUNTERWATCH</title>
+<meta name="theme-color" content="#0a0b0d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Counterwatch">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230a0b0d'/%3E%3Ccircle cx='16' cy='16' r='11' fill='none' stroke='%23b4ff00' stroke-width='2.5'/%3E%3Cline x1='16' y1='3' x2='16' y2='10' stroke='%23b4ff00' stroke-width='2.5'/%3E%3Cline x1='16' y1='22' x2='16' y2='29' stroke='%23b4ff00' stroke-width='2.5'/%3E%3Cline x1='3' y1='16' x2='10' y2='16' stroke='%23b4ff00' stroke-width='2.5'/%3E%3Cline x1='22' y1='16' x2='29' y2='16' stroke='%23b4ff00' stroke-width='2.5'/%3E%3Ccircle cx='16' cy='16' r='2.5' fill='%23b4ff00'/%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg:#0a0b0d; --bg2:#101216; --panel:#13161b; --panel2:#1a1e25; --line:#272d38;
+    --txt:#e9eef5; --muted:#8a93a3;
+    --lime:#b4ff00; --limed:#7ab300; --cyan:#19e3ff;
+    --tank:#3ea6ff; --damage:#ff4d4d; --support:#46e08a;
+    --good:#b4ff00; --warn:#ffb020; --bad:#ff5a5a;
+    --tS:#ffd11a; --tA:#b4ff00; --tB:#19e3ff; --tC:#9aa7b8; --tD:#ff9f1a; --tF:#ff3b3b;
+    --disp:'Impact','Haettenschweiler','Franklin Gothic Bold','Arial Narrow Bold',sans-serif;
+    --num:'Bahnschrift','DIN Alternate','Roboto Condensed','Arial Narrow',sans-serif;
+    --cut:polygon(0 0,100% 0,100% calc(100% - 11px),calc(100% - 11px) 100%,0 100%);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0}
+  body{
+    background:var(--bg); color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.45; padding:env(safe-area-inset-top) 0 50px;
+    background-image:radial-gradient(circle at 50% -10%,rgba(180,255,0,.06),transparent 55%);
+  }
+  /* subtle CRT scanlines */
+  body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:99;
+    background:repeating-linear-gradient(0deg,rgba(255,255,255,.012) 0 1px,transparent 1px 3px)}
+  .wrap{max-width:700px;margin:0 auto;padding:12px 12px 0}
+  .disp{font-family:var(--disp);text-transform:uppercase;letter-spacing:.5px}
+
+  /* ---- header / wordmark ---- */
+  header{margin:4px 0 2px}
+  .mark{font-family:var(--disp);font-weight:700;font-size:2.05rem;line-height:.95;font-style:italic;
+    transform:skewX(-7deg);letter-spacing:1px;display:inline-block}
+  .mark .a{color:#fff} .mark .b{color:var(--lime);text-shadow:0 0 16px rgba(180,255,0,.5)}
+  .stripe{height:7px;margin:6px 0 4px;
+    background:repeating-linear-gradient(-45deg,var(--lime) 0 11px,#0a0b0d 11px 22px);
+    clip-path:var(--cut)}
+  .sub{font-family:var(--num);color:var(--muted);font-size:.78rem;letter-spacing:1.5px;text-transform:uppercase;margin:0 0 12px}
+  .sub b{color:var(--lime)}
+
+  /* ---- controls ---- */
+  .ctrls{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+  .seg{display:flex;background:var(--panel);border:1px solid var(--line);padding:3px;gap:3px;clip-path:var(--cut)}
+  .seg.grow{flex:1}
+  .seg button{flex:1;background:transparent;color:var(--muted);border:0;padding:9px 12px;
+    font-family:var(--disp);font-weight:600;text-transform:uppercase;letter-spacing:.8px;font-size:.82rem;cursor:pointer;white-space:nowrap}
+  .seg button.on{background:var(--lime);color:#0a0b0d;box-shadow:0 0 14px rgba(180,255,0,.4)}
+
+  .mapwrap{flex:1 1 100%;position:relative}
+  .mapwrap::before{content:"MAP";position:absolute;left:11px;top:50%;transform:translateY(-50%);
+    font-family:var(--disp);font-size:.7rem;letter-spacing:1.5px;color:var(--lime);pointer-events:none}
+  select#map{width:100%;background:var(--panel);color:var(--txt);border:1px solid var(--line);
+    padding:11px 12px 11px 52px;font-family:var(--num);font-size:.95rem;font-weight:600;
+    letter-spacing:.5px;clip-path:var(--cut);-webkit-appearance:none;appearance:none;cursor:pointer}
+  .mapwrap::after{content:"▼";position:absolute;right:16px;top:50%;transform:translateY(-50%);color:var(--lime);font-size:.7rem;pointer-events:none}
+
+  /* ---- panels ---- */
+  .panel{background:linear-gradient(180deg,var(--panel),var(--bg2));border:1px solid var(--line);
+    padding:11px;margin-bottom:12px;clip-path:var(--cut);position:relative}
+  .panel.enemy{border-left:3px solid var(--damage)}
+  .panel.mine{border-left:3px solid var(--support)}
+  .panel h2{font-family:var(--disp);font-size:.8rem;letter-spacing:1.5px;color:var(--txt);margin:0 0 10px;display:flex;align-items:center}
+  .panel.enemy h2{color:var(--damage)} .panel.mine h2{color:var(--support)}
+  .panel h2 .tag{margin-left:auto;font-family:var(--num);color:var(--muted);font-size:.85rem;letter-spacing:1px}
+
+  .slots{display:flex;flex-wrap:wrap;gap:7px}
+  .slot{flex:1 1 calc(50% - 4px);min-width:135px;display:flex;align-items:center;gap:8px;
+    background:var(--panel2);border:1px solid var(--line);border-left:4px solid var(--line);
+    padding:8px 10px;cursor:pointer;min-height:46px;text-align:left}
+  .slot.role-Tank{border-left-color:var(--tank)} .slot.role-Damage{border-left-color:var(--damage)} .slot.role-Support{border-left-color:var(--support)}
+  .slot .body{flex:1;display:flex;flex-direction:column;line-height:1.18;overflow:hidden}
+  .slot .rl{font-family:var(--disp);font-size:.6rem;letter-spacing:1px;color:var(--muted)}
+  .slot .hn{font-weight:700;font-size:.96rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--num);letter-spacing:.3px}
+  .slot .empty{color:var(--muted);font-weight:600;font-family:var(--num)}
+  .slot .clr{color:var(--muted);font-size:1.05rem;padding:2px 5px;margin:-2px -3px -2px 0}
+  .slot .nw{font-size:.5rem;background:var(--lime);color:#0a0b0d;padding:1px 4px;margin-left:6px;font-family:var(--disp);font-weight:700;letter-spacing:.5px}
+
+  /* ---- results ---- */
+  .results h2{font-family:var(--disp);font-size:.82rem;letter-spacing:1.5px;color:var(--lime);margin:0 0 11px;display:flex;align-items:center}
+  .results h2 .tag{margin-left:auto;color:var(--txt);font-family:var(--num)}
+  .hint{background:#15181d;border:1px dashed var(--line);padding:10px 12px;color:var(--muted);font-size:.84rem;margin-bottom:11px;clip-path:var(--cut)}
+
+  .rec{background:linear-gradient(180deg,var(--panel2),var(--bg2));border:1px solid var(--line);
+    padding:11px;margin-bottom:9px;clip-path:var(--cut)}
+  .rec.top{border-color:var(--lime);box-shadow:0 0 0 1px var(--lime),0 0 22px rgba(180,255,0,.18)}
+  .rec .head{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .rec .rank{font-family:var(--disp);font-weight:700;font-size:.72rem;color:#0a0b0d;background:var(--muted);padding:2px 8px;letter-spacing:.5px}
+  .rec.top .rank{background:var(--lime);box-shadow:0 0 12px rgba(180,255,0,.5)}
+  .rec .name{font-family:var(--disp);font-weight:700;font-size:1.32rem;letter-spacing:.5px}
+  .rec .role-pill{font-family:var(--disp);font-size:.58rem;letter-spacing:1px;padding:3px 7px;font-weight:600}
+  .pill-Tank{background:rgba(62,166,255,.16);color:var(--tank)} .pill-Damage{background:rgba(255,77,77,.16);color:var(--damage)} .pill-Support{background:rgba(70,224,138,.16);color:var(--support)}
+  .rec .nw{font-size:.52rem;background:var(--lime);color:#0a0b0d;padding:2px 5px;font-family:var(--disp);font-weight:700;letter-spacing:.5px}
+  .rec .match{margin-left:auto;font-family:var(--num);font-size:1.25rem;font-weight:700;color:var(--lime)}
+  .rec .match small{display:block;font-size:.5rem;letter-spacing:1.5px;color:var(--muted);font-family:var(--disp);text-align:right;margin-top:-3px}
+
+  .stats{display:flex;gap:6px;margin:9px 0 2px;flex-wrap:wrap}
+  .stat{font-family:var(--num);font-size:.74rem;font-weight:600;letter-spacing:.5px;background:#0e1014;border:1px solid var(--line);padding:3px 8px;color:var(--muted)}
+  .stat b{color:var(--txt);font-size:.86rem}
+  .tier{font-family:var(--disp);font-weight:700;padding:3px 9px;font-size:.82rem;letter-spacing:1px;color:#0a0b0d}
+  .tS{background:var(--tS)} .tA{background:var(--tA)} .tB{background:var(--tB)} .tC{background:var(--tC)} .tD{background:var(--tD)} .tF{background:var(--tF)}
+
+  .bar{height:5px;background:#0c0e12;margin:8px 0 4px;overflow:hidden}
+  .bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--limed),var(--lime))}
+  .why{list-style:none;padding:0;margin:7px 0 0;font-size:.85rem}
+  .why li{display:flex;gap:7px;padding:2px 0;align-items:flex-start}
+  .why li .ic{flex:none;width:14px;text-align:center;font-weight:700}
+  .why li.good .ic{color:var(--good)} .why li.map .ic{color:var(--cyan)} .why li.map{color:#c7eef6}
+  .why li.warn,.why li.warn .ic{color:var(--warn)}
+  .more{color:var(--lime);font-family:var(--disp);letter-spacing:1px;font-size:.78rem;margin-top:9px;cursor:pointer;user-select:none}
+  .rest{margin-top:5px}
+  .rest .row{display:flex;align-items:center;gap:8px;padding:6px 2px;border-top:1px solid var(--line);font-size:.85rem}
+  .rest .row .tinytier{font-family:var(--disp);font-weight:700;font-size:.62rem;padding:1px 5px;color:#0a0b0d}
+  .rest .row .nm{font-family:var(--num);font-weight:600;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;flex:1}
+  .rest .row .wr{font-family:var(--num);color:var(--muted);font-size:.78rem}
+  .rest .row .match{font-family:var(--num);color:var(--lime);font-weight:700;font-size:.85rem;min-width:34px;text-align:right}
+
+  footer{color:var(--muted);font-size:.7rem;text-align:center;margin-top:16px;line-height:1.7;font-family:var(--num);letter-spacing:.3px}
+  footer a{color:var(--lime);text-decoration:none}
+  footer .src{color:#6b7484}
+
+  /* ---- picker modal ---- */
+  .modal{position:fixed;inset:0;background:rgba(4,5,7,.85);display:none;z-index:50;padding:env(safe-area-inset-top) 0 0}
+  .modal.open{display:block}
+  .sheet{position:absolute;inset:0;max-width:700px;margin:0 auto;background:var(--bg);display:flex;flex-direction:column}
+  .sheet .top{display:flex;gap:8px;align-items:center;padding:11px 13px;border-bottom:1px solid var(--line);background:var(--panel)}
+  .sheet .top input{flex:1;background:var(--panel2);border:1px solid var(--line);color:var(--txt);padding:11px 12px;font-size:1rem;font-family:var(--num);clip-path:var(--cut)}
+  .sheet .top .x{background:var(--lime);border:0;color:#0a0b0d;padding:11px 16px;font-family:var(--disp);font-weight:700;letter-spacing:.8px;cursor:pointer;clip-path:var(--cut)}
+  .sheet .list{flex:1;overflow:auto;padding:8px 13px 36px}
+  .grp{font-family:var(--disp);font-size:.7rem;letter-spacing:2px;color:var(--lime);margin:13px 2px 6px}
+  .hbtn{display:flex;align-items:center;gap:9px;width:100%;text-align:left;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--line);color:var(--txt);padding:10px 12px;margin-bottom:6px;font-size:.95rem;font-family:var(--num);font-weight:600;cursor:pointer}
+  .hbtn.role-Tank{border-left-color:var(--tank)} .hbtn.role-Damage{border-left-color:var(--damage)} .hbtn.role-Support{border-left-color:var(--support)}
+  .hbtn .htier{font-family:var(--disp);font-weight:700;font-size:.6rem;padding:1px 5px;color:#0a0b0d}
+  .hbtn .wr{color:var(--muted);font-size:.78rem;font-family:var(--num)}
+  .hbtn .nw{font-size:.5rem;background:var(--lime);color:#0a0b0d;padding:1px 4px;font-family:var(--disp);font-weight:700}
+  .hbtn .sp{margin-left:auto;display:flex;gap:7px;align-items:center}
+  .hbtn:disabled{opacity:.3;cursor:default}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="mark"><span class="a">COUNTER</span><span class="b">WATCH</span></div>
+    <div class="stripe"></div>
+    <p class="sub">// HERO COUNTER ENGINE · <b>SEASON 3</b> META · 2026</p>
+  </header>
+
+  <div class="ctrls">
+    <div class="seg grow" id="fmt">
+      <button data-f="5v5" class="on">5v5</button>
+      <button data-f="6v6">6v6</button>
+    </div>
+    <div class="mapwrap"><select id="map"></select></div>
+  </div>
+
+  <div class="panel enemy">
+    <h2>ENEMY TEAM <span class="tag" id="enemyCount"></span></h2>
+    <div class="slots" id="enemySlots"></div>
+  </div>
+
+  <div class="panel mine">
+    <h2>YOUR TEAM <span class="tag" id="myCount"></span></h2>
+    <div class="slots" id="mySlots"></div>
+  </div>
+
+  <div class="seg" id="role">
+    <button data-r="Tank">Tank</button>
+    <button data-r="Damage" class="on">Damage</button>
+    <button data-r="Support">Support</button>
+  </div>
+  <div style="height:12px"></div>
+
+  <div class="panel results">
+    <h2>RECOMMENDED <span class="tag" id="recRole"></span></h2>
+    <div id="recBody"></div>
+  </div>
+
+  <footer>
+    <span class="src">DATA · win/pick/tier from <a href="https://www.counterwatch.gg/stats/overwatch/tier-list" target="_blank" rel="noopener">counterwatch.gg</a> &amp; <a href="https://overwatch.blizzard.com/en-us/rates/" target="_blank" rel="noopener">Blizzard rates</a> · S3, Jun 2026</span><br>
+    Counters use hero-kit archetypes + meta win-rates + map type — an advisor, not gospel. Trust your read.<br>
+    Edit <code>HEROES</code> / <code>MAPS</code> / <code>*_COUNTERS</code> at the top of this file's script as patches land.
+  </footer>
+</div>
+
+<div class="modal" id="modal">
+  <div class="sheet">
+    <div class="top">
+      <input id="search" type="text" placeholder="SEARCH HERO…" autocomplete="off" autocorrect="off" spellcheck="false">
+      <button class="x" id="closeModal">DONE</button>
+    </div>
+    <div class="list" id="pickList"></div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   HERO DATA — Season 3 (2026).
+   meta: {tier, wr (win%), pr (pick%)} from counterwatch.gg / Blizzard rates, Jun 2026.
+   tags vocabulary:
+     airborne antiair dive antidive barrier antibarrier shieldbreak cc burst
+     antiheal squishyimmobile sustain longrange cleanse speed pocket
+   range: close|mid|long · dmg: hitscan|projectile|beam|melee · mob: 0..3
+   new:true = 2026 hero, kit/tags from early data.
+   ============================================================ */
+const HEROES = {
+  // ---- TANKS ----
+  'D.Va':         {role:'Tank', range:'close', dmg:'hitscan',    mob:3, tags:['dive','antiair'], meta:{tier:'F',wr:46.4,pr:15}},
+  'Doomfist':     {role:'Tank', range:'close', dmg:'melee',      mob:3, tags:['dive','cc'], meta:{tier:'B',wr:50.7,pr:14}},
+  'Domina':       {role:'Tank', range:'long',  dmg:'beam',       mob:0, tags:['barrier','longrange','antidive','cc'], new:true, meta:{tier:'A',wr:51.6,pr:14}},
+  'Hazard':       {role:'Tank', range:'close', dmg:'projectile', mob:2, tags:['dive','cc'], meta:{tier:'B',wr:51.5,pr:9}},
+  'Junker Queen': {role:'Tank', range:'close', dmg:'hitscan',    mob:2, tags:['antiheal','cc','sustain'], meta:{tier:'A',wr:52.9,pr:8}},
+  'Mauga':        {role:'Tank', range:'close', dmg:'hitscan',    mob:1, tags:['sustain','shieldbreak'], meta:{tier:'B',wr:50.5,pr:14}},
+  'Orisa':        {role:'Tank', range:'mid',   dmg:'projectile', mob:1, tags:['cc','sustain'], meta:{tier:'F',wr:46.3,pr:21}},
+  'Ramattra':     {role:'Tank', range:'mid',   dmg:'projectile', mob:1, tags:['barrier','shieldbreak','cc'], meta:{tier:'C',wr:49.7,pr:18}},
+  'Reinhardt':    {role:'Tank', range:'close', dmg:'melee',      mob:1, tags:['barrier','cc'], meta:{tier:'S',wr:53.2,pr:23}},
+  'Roadhog':      {role:'Tank', range:'mid',   dmg:'hitscan',    mob:1, tags:['cc','sustain','burst','antidive'], meta:{tier:'D',wr:47.0,pr:15}},
+  'Sigma':        {role:'Tank', range:'mid',   dmg:'projectile', mob:1, tags:['barrier','longrange','cc','antidive'], meta:{tier:'A',wr:52.1,pr:21}},
+  'Winston':      {role:'Tank', range:'close', dmg:'beam',       mob:3, tags:['dive','antidive','barrier'], meta:{tier:'B',wr:50.6,pr:10}},
+  'Wrecking Ball':{role:'Tank', range:'close', dmg:'hitscan',    mob:3, tags:['dive','cc','sustain'], meta:{tier:'A',wr:51.9,pr:7}},
+  'Zarya':        {role:'Tank', range:'mid',   dmg:'beam',       mob:1, tags:['sustain','antidive','shieldbreak'], meta:{tier:'D',wr:48.5,pr:10}},
+
+  // ---- DAMAGE ----
+  'Anran':        {role:'Damage', range:'close', dmg:'projectile', mob:3, tags:['dive','burst'], new:true, meta:{tier:'A',wr:51.6,pr:20}},
+  'Ashe':         {role:'Damage', range:'long',  dmg:'hitscan',    mob:1, tags:['longrange','antiair','burst'], meta:{tier:'B',wr:51.1,pr:22}},
+  'Bastion':      {role:'Damage', range:'mid',   dmg:'hitscan',    mob:0, tags:['shieldbreak','burst','antiair','squishyimmobile'], meta:{tier:'D',wr:48.4,pr:23}},
+  'Cassidy':      {role:'Damage', range:'mid',   dmg:'hitscan',    mob:1, tags:['antidive','antiair','cc','burst'], meta:{tier:'D',wr:48.1,pr:32}},
+  'Echo':         {role:'Damage', range:'mid',   dmg:'projectile', mob:3, tags:['dive','airborne','burst'], meta:{tier:'C',wr:49.6,pr:10}},
+  'Emre':         {role:'Damage', range:'mid',   dmg:'hitscan',    mob:2, tags:['antiair','burst'], new:true, meta:{tier:'D',wr:48.4,pr:19}},
+  'Freja':        {role:'Damage', range:'mid',   dmg:'projectile', mob:2, tags:['burst'], meta:{tier:'F',wr:46.3,pr:8}},
+  'Genji':        {role:'Damage', range:'close', dmg:'projectile', mob:3, tags:['dive','burst'], meta:{tier:'B',wr:51.1,pr:22}},
+  'Hanzo':        {role:'Damage', range:'long',  dmg:'projectile', mob:2, tags:['longrange','burst','shieldbreak'], meta:{tier:'C',wr:49.6,pr:16}},
+  'Junkrat':      {role:'Damage', range:'mid',   dmg:'projectile', mob:2, tags:['antidive','shieldbreak','cc'], meta:{tier:'B',wr:51.3,pr:19}},
+  'Mei':          {role:'Damage', range:'close', dmg:'hitscan',    mob:1, tags:['antidive','cc','sustain'], meta:{tier:'A',wr:52.3,pr:13}},
+  'Pharah':       {role:'Damage', range:'mid',   dmg:'projectile', mob:3, tags:['airborne','burst'], meta:{tier:'A',wr:52.4,pr:9}},
+  'Reaper':       {role:'Damage', range:'close', dmg:'hitscan',    mob:2, tags:['dive','antidive','sustain','burst','shieldbreak'], meta:{tier:'A',wr:51.9,pr:20}},
+  'Shion':        {role:'Damage', range:'close', dmg:'hitscan',    mob:3, tags:['dive','burst'], new:true, meta:{tier:'B',wr:51.1,pr:20}},
+  'Sierra':       {role:'Damage', range:'mid',   dmg:'hitscan',    mob:3, tags:['antidive','antiair'], new:true, meta:{tier:'B',wr:50.9,pr:39}},
+  'Sojourn':      {role:'Damage', range:'mid',   dmg:'hitscan',    mob:2, tags:['burst','antiair','antibarrier','cc'], meta:{tier:'F',wr:45.1,pr:18}},
+  'Soldier: 76':  {role:'Damage', range:'mid',   dmg:'hitscan',    mob:1, tags:['antiair','shieldbreak'], meta:{tier:'C',wr:49.3,pr:28}},
+  'Sombra':       {role:'Damage', range:'close', dmg:'hitscan',    mob:3, tags:['dive','antidive','antibarrier','cc'], meta:{tier:'D',wr:47.8,pr:9}},
+  'Symmetra':     {role:'Damage', range:'close', dmg:'beam',       mob:1, tags:['antibarrier','antidive','shieldbreak'], meta:{tier:'S',wr:54.2,pr:6}},
+  'Torbjörn':     {role:'Damage', range:'mid',   dmg:'hitscan',    mob:0, tags:['antidive','shieldbreak'], meta:{tier:'S',wr:55.7,pr:9}},
+  'Tracer':       {role:'Damage', range:'close', dmg:'hitscan',    mob:3, tags:['dive','burst'], meta:{tier:'B',wr:50.6,pr:14}},
+  'Vendetta':     {role:'Damage', range:'close', dmg:'melee',      mob:3, tags:['dive','burst'], new:true, meta:{tier:'C',wr:49.9,pr:6}},
+  'Venture':      {role:'Damage', range:'close', dmg:'projectile', mob:2, tags:['dive','burst','sustain'], meta:{tier:'A',wr:51.9,pr:5}},
+  'Widowmaker':   {role:'Damage', range:'long',  dmg:'hitscan',    mob:2, tags:['longrange','antiair','burst','squishyimmobile'], meta:{tier:'D',wr:47.7,pr:12}},
+
+  // ---- SUPPORT ----
+  'Ana':          {role:'Support', range:'long',  dmg:'hitscan',    mob:0, tags:['antidive','antiheal','cc','longrange','squishyimmobile'], meta:{tier:'D',wr:48.0,pr:54}},
+  'Baptiste':     {role:'Support', range:'mid',   dmg:'hitscan',    mob:1, tags:['antidive','antiair','sustain'], meta:{tier:'D',wr:47.4,pr:12}},
+  'Brigitte':     {role:'Support', range:'close', dmg:'melee',      mob:1, tags:['antidive','cc','sustain'], meta:{tier:'A',wr:52.7,pr:11}},
+  'Illari':       {role:'Support', range:'long',  dmg:'hitscan',    mob:1, tags:['longrange','antiair','burst','antidive'], meta:{tier:'B',wr:51.5,pr:15}},
+  'Jetpack Cat':  {role:'Support', range:'mid',   dmg:'projectile', mob:3, tags:['airborne','cc'], new:true, meta:{tier:'C',wr:49.4,pr:13}},
+  'Juno':         {role:'Support', range:'mid',   dmg:'projectile', mob:2, tags:['antiair','speed'], meta:{tier:'B',wr:50.4,pr:34}},
+  'Kiriko':       {role:'Support', range:'mid',   dmg:'projectile', mob:3, tags:['antidive','burst','cleanse'], meta:{tier:'C',wr:48.7,pr:66}},
+  'Lifeweaver':   {role:'Support', range:'mid',   dmg:'projectile', mob:1, tags:['antidive'], meta:{tier:'B',wr:50.1,pr:30}},
+  'Lúcio':        {role:'Support', range:'close', dmg:'projectile', mob:3, tags:['antidive','cc','speed'], meta:{tier:'B',wr:50.9,pr:12}},
+  'Mercy':        {role:'Support', range:'mid',   dmg:'projectile', mob:2, tags:['airborne','squishyimmobile','pocket'], meta:{tier:'C',wr:49.7,pr:41}},
+  'Mizuki':       {role:'Support', range:'mid',   dmg:'projectile', mob:2, tags:['antidive','cc'], new:true, meta:{tier:'A',wr:51.7,pr:30}},
+  'Moira':        {role:'Support', range:'close', dmg:'beam',       mob:2, tags:['antidive','sustain'], meta:{tier:'C',wr:49.1,pr:43}},
+  'Wuyang':       {role:'Support', range:'mid',   dmg:'projectile', mob:2, tags:['antiair','cc'], new:true, meta:{tier:'B',wr:51.5,pr:17}},
+  'Zenyatta':     {role:'Support', range:'mid',   dmg:'projectile', mob:0, tags:['longrange','burst','squishyimmobile'], meta:{tier:'S',wr:53.9,pr:23}},
+};
+
+/* MAPS — every map in the S3 pool. tags drive the map factor:
+   longsight open brawl chokes vertical flanks pits */
+const MAPS = {
+  // Control
+  'Antarctic Peninsula':{mode:'Control',tags:['brawl','flanks']},
+  'Busan':{mode:'Control',tags:['vertical','brawl']},
+  'Ilios':{mode:'Control',tags:['open','flanks','pits']},
+  'Lijiang Tower':{mode:'Control',tags:['flanks','vertical']},
+  'Nepal':{mode:'Control',tags:['vertical','open']},
+  'Oasis':{mode:'Control',tags:['open','longsight']},
+  'Samoa':{mode:'Control',tags:['vertical','open']},
+  // Escort
+  'Circuit Royal':{mode:'Escort',tags:['longsight','open']},
+  'Dorado':{mode:'Escort',tags:['longsight','chokes','flanks']},
+  'Havana':{mode:'Escort',tags:['longsight','flanks']},
+  'Junkertown':{mode:'Escort',tags:['longsight','chokes']},
+  'Rialto':{mode:'Escort',tags:['flanks','chokes']},
+  'Route 66':{mode:'Escort',tags:['chokes','flanks']},
+  'Shambali Monastery':{mode:'Escort',tags:['vertical','longsight']},
+  'Watchpoint: Gibraltar':{mode:'Escort',tags:['longsight','open']},
+  // Hybrid
+  'Blizzard World':{mode:'Hybrid',tags:['chokes','brawl']},
+  'Eichenwalde':{mode:'Hybrid',tags:['chokes','brawl','vertical']},
+  'Hollywood':{mode:'Hybrid',tags:['chokes','brawl']},
+  "King's Row":{mode:'Hybrid',tags:['chokes','brawl']},
+  'Midtown':{mode:'Hybrid',tags:['longsight','flanks']},
+  'Neon Junction':{mode:'Hybrid',tags:['brawl','chokes']},
+  'Numbani':{mode:'Hybrid',tags:['vertical','flanks']},
+  'Paraíso':{mode:'Hybrid',tags:['vertical','flanks']},
+  // Push
+  'Colosseo':{mode:'Push',tags:['longsight','flanks']},
+  'Esperança':{mode:'Push',tags:['vertical','flanks']},
+  'New Queen Street':{mode:'Push',tags:['longsight','open']},
+  'Runasapi':{mode:'Push',tags:['vertical','chokes']},
+  // Flashpoint
+  'Aatlis':{mode:'Flashpoint',tags:['open','flanks']},
+  'New Junk City':{mode:'Flashpoint',tags:['open','flanks']},
+  'Suravasa':{mode:'Flashpoint',tags:['open','longsight','flanks']},
+  // Clash
+  'Hanaoka':{mode:'Clash',tags:['brawl','vertical']},
+  'Throne of Anubis':{mode:'Clash',tags:['brawl','chokes']},
+};
+
+/* Iconic hard-counters tags alone miss. */
+const ENEMY_COUNTERS = {
+  'Sombra':       {heroes:['Genji','Tracer','Winston','Wrecking Ball','Doomfist','Echo','Sojourn','Pharah','Shion','Vendetta','Venture','Anran'], why:'Hack cancels mobility & abilities'},
+  'Ana':          {heroes:['Winston','Wrecking Ball','D.Va','Doomfist','Genji'], why:'Sleep Dart + Biotic Grenade neutralize dive'},
+  'Mei':          {heroes:['Genji','Reaper','Doomfist','Winston','Tracer','Vendetta','Wrecking Ball','Anran'], why:'Freeze & Ice Wall lock down melee/dive'},
+  'Zarya':        {heroes:['Genji','Reaper','Pharah'], why:'Bubbles eat their burst combos'},
+  'Brigitte':     {heroes:['Tracer','Genji','Shion','Vendetta','Doomfist','Anran'], why:'Bash & Whip Shot out-brawl flankers'},
+  'Cassidy':      {heroes:['Tracer','Genji','Echo','Pharah','Shion','Vendetta','Anran'], why:'Magnetic Grenade + hitscan delete divers'},
+  'Reaper':       {heroes:['Winston','Reinhardt','Wrecking Ball','Orisa','Mauga','Zarya','D.Va','Roadhog'], why:'Shotguns shred big tanks up close'},
+  'Symmetra':     {heroes:['Winston','Wrecking Ball','D.Va'], why:'Beam melts dive tanks'},
+  'Pharah':       {heroes:['Reaper','Reinhardt','Mei','Junkrat','Brigitte','Symmetra','Torbjörn'], why:'Flies above their effective range'},
+  'Roadhog':      {heroes:['Ana','Zenyatta','Widowmaker','Ashe','Kiriko'], why:'Hook one-shot combo'},
+  'Junkrat':      {heroes:['Reinhardt','Winston','Wrecking Ball'], why:'Trap + spam punish brawl/dive'},
+  'Doomfist':     {heroes:['Ana','Zenyatta','Widowmaker','Ashe','Baptiste','Mercy'], why:'Dives & bursts the immobile backline'},
+  'Winston':      {heroes:['Ana','Zenyatta','Widowmaker','Ashe','Bastion'], why:'Jumps the backline, bubble blocks peel'},
+  'Genji':        {heroes:['Ana','Zenyatta','Widowmaker','Ashe'], why:'Dives & deflects, kills immobile backline'},
+  'Tracer':       {heroes:['Ana','Zenyatta','Widowmaker','Baptiste'], why:'Blinks onto immobile targets'},
+  'Wrecking Ball':{heroes:['Ana','Zenyatta','Widowmaker','Ashe'], why:'Disrupts & dives the backline'},
+};
+const CANDIDATE_COUNTERS = {
+  'Sombra':    {heroes:['Genji','Tracer','Winston','Wrecking Ball','Doomfist','Echo','Pharah','Sojourn'], why:'Hack strips their key abilities'},
+  'Reaper':    {heroes:['Winston','Reinhardt','Wrecking Ball','Orisa','Mauga','Zarya','D.Va','Roadhog'], why:'shotguns melt big tanks'},
+  'Mei':       {heroes:['Genji','Reaper','Doomfist','Winston','Tracer','Vendetta','Anran'], why:'freeze & wall control'},
+  'Brigitte':  {heroes:['Tracer','Genji','Shion','Vendetta','Anran'], why:'anti-flanker stun & sustain'},
+  'Cassidy':   {heroes:['Tracer','Genji','Echo','Pharah','Shion','Vendetta','Anran'], why:'Magnetic Grenade + hitscan'},
+  'Pharah':    {heroes:['Reaper','Reinhardt','Mei','Junkrat','Symmetra','Torbjörn','Brigitte'], why:'airborne, out of their range'},
+  'Ana':       {heroes:['Winston','Wrecking Ball','D.Va','Doomfist'], why:'Sleep & anti-heal vs dive'},
+  'Zarya':     {heroes:['Genji','Reaper','Pharah'], why:'bubbles negate their burst'},
+  'Roadhog':   {heroes:['Ana','Zenyatta','Widowmaker','Ashe','Kiriko'], why:'Hook one-shots squishies'},
+  'Symmetra':  {heroes:['Winston','Wrecking Ball','D.Va'], why:'beam shreds dive tanks'},
+  'Junkrat':   {heroes:['Reinhardt','Winston','Wrecking Ball'], why:'spam & trap punish them'},
+  'Winston':   {heroes:['Ana','Zenyatta','Widowmaker','Ashe','Bastion'], why:'dives the immobile backline'},
+  'Wuyang':    {heroes:['Pharah','Echo','Mercy','Jetpack Cat'], why:'controllable orb picks fliers out of the air'},
+  'Sierra':    {heroes:['Genji','Tracer','Pharah','Echo','Shion'], why:'auto-tracking shots punish their mobility'},
+};
+
+/* ============================================================ STATE */
+const SLOTS={'5v5':['Tank','Damage','Damage','Support','Support'],'6v6':['Tank','Tank','Damage','Damage','Support','Support']};
+let state={fmt:'5v5',myRole:'Damage',map:'',
+  enemy:SLOTS['5v5'].map(r=>({role:r,hero:null})),
+  mine: SLOTS['5v5'].map(r=>({role:r,hero:null}))};
+let picker=null;
+const taken=()=>new Set([...state.enemy,...state.mine].map(s=>s.hero).filter(Boolean));
+const list=a=>a.join(', ');
+
+/* ============================================================ ENGINE */
+function mapFactor(c){
+  if(!state.map) return {pts:0,notes:[]};
+  const M=MAPS[state.map], t=new Set(M.tags), H=HEROES[c], ct=new Set(H.tags);
+  let pts=0; const notes=[]; const nm=state.map;
+  const longm=t.has('longsight')||t.has('open');
+  if(longm){
+    if(ct.has('longrange')||ct.has('antiair')){pts+=2; notes.push(`${nm}'s long sightlines reward your range.`);}
+    else if(H.range==='close'&&H.mob<=1&&!ct.has('barrier')){pts-=2; notes.push(`${nm}'s open sightlines expose your short range.`);}
+  }
+  if(t.has('vertical')){
+    if(ct.has('airborne')){pts+=2; notes.push(`${nm}'s verticality lets you abuse the air.`);}
+    else if(H.mob>=3||ct.has('dive')){pts+=1; notes.push(`${nm}'s high ground suits your mobility.`);}
+  }
+  if(t.has('brawl')||t.has('chokes')){
+    if(ct.has('barrier')||ct.has('shieldbreak')||ct.has('cc')||H.range==='close'){pts+=2; notes.push(`${nm}'s tight chokes & brawl spaces play to your strengths.`);}
+    else if(ct.has('longrange')&&H.mob<=1){pts-=1; notes.push(`${nm}'s close quarters limit your sightlines.`);}
+  }
+  if(t.has('flanks')){
+    if(ct.has('dive')){pts+=1; notes.push(`${nm}'s flank routes open up your dive.`);}
+    else if(ct.has('antidive')){pts+=1; notes.push(`${nm}'s flank routes make your peel valuable.`);}
+  }
+  if(t.has('pits')&&ct.has('cc')){pts+=1; notes.push(`${nm}'s pits reward your knockback/CC.`);}
+  return {pts:Math.max(-4,Math.min(5,pts)),notes};
+}
+
+function evaluate(c, enemy, my){
+  const H=HEROES, ct=new Set(H[c].tags);
+  let score=0; const reasons=[], warnings=[];
+  const add =(p,m)=>{score+=p; if(m&&!reasons.includes(m))reasons.push(m);};
+  const warn=(p,m)=>{score+=p; if(m&&!warnings.includes(m))warnings.push(m);};
+  const have=t=>enemy.filter(e=>H[e].tags.includes(t));
+  const air=have('airborne'),dive=have('dive'),squ=have('squishyimmobile'),
+        barr=have('barrier'),sust=have('sustain'),lr=have('longrange'),
+        eAntiDive=have('antidive'),
+        eCC=enemy.filter(e=>H[e].tags.some(t=>t==='cc'||t==='antiheal'));
+
+  if(air.length){
+    if(ct.has('antiair')) add(Math.min(air.length*3,6),`Shoots down their airborne threat${air.length>1?'s':''}: ${list(air)}.`);
+    else if(H[c].range==='close'||H[c].dmg==='melee') warn(-2,`Can't deal with airborne ${list(air)} — they float above your range.`);
+  }
+  if(dive.length&&ct.has('antidive')) add(Math.min(dive.length*2,6),`Peels and punishes their dive (${list(dive)}).`);
+  if(squ.length&&ct.has('dive')){
+    add(Math.min(squ.length*3,6),`Their backline is immobile (${list(squ)}) — you can flank and delete them.`);
+    if(eAntiDive.length) warn(-Math.min(eAntiDive.length*2,4),`But ${list(eAntiDive)} will peel hard against your dive.`);
+  }
+  if(barr.length&&(ct.has('antibarrier')||ct.has('shieldbreak'))) add(Math.min(barr.length*2,4),`Breaks through their barrier (${list(barr)}).`);
+  if(lr.length>=2){
+    if(ct.has('longrange')||H[c].mob>=3||ct.has('barrier')) add(1,`Holds up against their poke (${list(lr)}).`);
+    else if(H[c].range==='close'&&H[c].mob<=1) warn(-2,`Their poke (${list(lr)}) whittles you before you close in.`);
+  }
+  if(sust.length&&ct.has('antiheal')) add(Math.min(sust.length*2,4),`Cuts their sustain/healing (${list(sust)}).`);
+  if(dive.length&&ct.has('cc')) add(Math.min(dive.length,2),`Crowd control shuts down their mobile threats.`);
+  if(ct.has('cleanse')&&eCC.length) add(2,`Cleanses their CC/anti-heal (${list(eCC)}).`);
+
+  enemy.forEach(e=>{const m=ENEMY_COUNTERS[e]; if(m&&m.heroes.includes(c)) warn(-4,`${e} hard-counters ${c} — ${m.why}.`);});
+  const cm=CANDIDATE_COUNTERS[c];
+  if(cm){const hit=enemy.filter(e=>cm.heroes.includes(e)); if(hit.length) add(Math.min(hit.length*3,6),`Hard-counters ${list(hit)} — ${cm.why}.`);}
+
+  // ally synergy
+  if(my.includes('Mercy')&&H[c].role==='Damage'&&(ct.has('burst')||ct.has('longrange'))) add(1,`Mercy can pocket your ${c} for amplified damage.`);
+  const speeders=my.filter(h=>H[h].tags.includes('speed')||h==='Zarya');
+  if(speeders.length&&ct.has('dive')) add(1,`${list(speeders)} on your team enable ${c}'s dive.`);
+  if(my.includes('Ana')&&((H[c].role==='Tank'&&ct.has('dive'))||(H[c].role!=='Support'&&ct.has('burst')&&H[c].range==='close'))) add(1,`Ana can Nano-Boost your ${c}.`);
+
+  // map factor
+  const mf=mapFactor(c); score+=mf.pts; const mapNotes=mf.notes;
+
+  // meta factor (hard numbers)
+  const mt=H[c].meta, mpts=Math.round((mt.wr-50)*0.6); score+=mpts;
+  let metaNote=null, metaWarn=null;
+  if(mt.wr>=52) metaNote=`Strong in the S3 meta — ${mt.tier}-tier, ${mt.wr}% win rate.`;
+  else if(mt.wr<=48.5) metaWarn=`Currently weak in the meta — ${mt.tier}-tier, ${mt.wr}% win rate.`;
+
+  return {score, reasons, warnings, mapNotes, metaNote, metaWarn, meta:mt};
+}
+
+function recommend(){
+  const enemy=state.enemy.map(s=>s.hero).filter(Boolean);
+  const my=state.mine.map(s=>s.hero).filter(Boolean);
+  const used=taken();
+  const cands=Object.keys(HEROES).filter(h=>HEROES[h].role===state.myRole&&!used.has(h));
+  const scored=cands.map(c=>({hero:c,...evaluate(c,enemy,my)}));
+  scored.sort((a,b)=> b.score-a.score || b.meta.wr-a.meta.wr || a.hero.localeCompare(b.hero));
+  return {scored, enemyCount:enemy.length};
+}
+
+/* ============================================================ RENDER */
+function slotEl(team,idx){
+  const s=state[team][idx];
+  const el=document.createElement('button'); el.className='slot role-'+s.role; el.onclick=()=>openPicker(team,idx);
+  const body=document.createElement('div'); body.className='body';
+  const rl=document.createElement('div'); rl.className='rl'; rl.textContent=s.role;
+  const hn=document.createElement('div');
+  if(s.hero){hn.className='hn'; hn.textContent=s.hero; if(HEROES[s.hero].new){const b=document.createElement('span');b.className='nw';b.textContent='NEW';hn.appendChild(b);}}
+  else{hn.className='empty'; hn.textContent='+ ADD';}
+  body.append(rl,hn); el.appendChild(body);
+  if(s.hero){const x=document.createElement('span');x.className='clr';x.textContent='✕';x.onclick=(e)=>{e.stopPropagation();s.hero=null;renderAll();};el.appendChild(x);}
+  return el;
+}
+function renderTeams(){
+  const eS=document.getElementById('enemySlots'),mS=document.getElementById('mySlots');
+  eS.innerHTML='';mS.innerHTML='';
+  state.enemy.forEach((_,i)=>eS.appendChild(slotEl('enemy',i)));
+  state.mine.forEach((_,i)=>mS.appendChild(slotEl('mine',i)));
+  document.getElementById('enemyCount').textContent=state.enemy.filter(s=>s.hero).length+'/'+state.enemy.length;
+  document.getElementById('myCount').textContent=state.mine.filter(s=>s.hero).length+'/'+state.mine.length;
+}
+function whyList(r){
+  const ul=document.createElement('ul'); ul.className='why';
+  r.reasons.slice(0,6).forEach(t=>{const li=document.createElement('li');li.className='good';li.innerHTML='<span class="ic">✓</span><span>'+t+'</span>';ul.appendChild(li);});
+  (r.mapNotes||[]).slice(0,3).forEach(t=>{const li=document.createElement('li');li.className='map';li.innerHTML='<span class="ic">▷</span><span>'+t+'</span>';ul.appendChild(li);});
+  if(r.metaNote){const li=document.createElement('li');li.className='good';li.innerHTML='<span class="ic">★</span><span>'+r.metaNote+'</span>';ul.appendChild(li);}
+  r.warnings.slice(0,4).forEach(t=>{const li=document.createElement('li');li.className='warn';li.innerHTML='<span class="ic">!</span><span>'+t+'</span>';ul.appendChild(li);});
+  if(r.metaWarn){const li=document.createElement('li');li.className='warn';li.innerHTML='<span class="ic">!</span><span>'+r.metaWarn+'</span>';ul.appendChild(li);}
+  if(!r.reasons.length&&!(r.mapNotes||[]).length&&!r.warnings.length){const li=document.createElement('li');li.className='good';li.innerHTML='<span class="ic">–</span><span>No hard counters triggered — a safe flex pick for this matchup.</span>';ul.appendChild(li);}
+  return ul;
+}
+function recCard(r,rank,maxScore){
+  const H=HEROES[r.hero];
+  const card=document.createElement('div'); card.className='rec'+(rank===1?' top':'');
+  const head=document.createElement('div'); head.className='head';
+  const rk=document.createElement('span'); rk.className='rank'; rk.textContent='#'+rank;
+  const nm=document.createElement('span'); nm.className='name'; nm.textContent=r.hero;
+  const pill=document.createElement('span'); pill.className='role-pill pill-'+H.role; pill.textContent=H.role;
+  head.append(rk,nm,pill);
+  if(H.new){const b=document.createElement('span');b.className='nw';b.textContent='NEW';head.appendChild(b);}
+  const mc=document.createElement('span'); mc.className='match'; mc.innerHTML=(r.score>0?'+':'')+r.score+'<small>MATCH</small>'; head.appendChild(mc);
+  card.appendChild(head);
+  const stats=document.createElement('div'); stats.className='stats';
+  stats.innerHTML='<span class="tier t'+r.meta.tier+'">'+r.meta.tier+'-TIER</span>'+
+    '<span class="stat">WIN <b>'+r.meta.wr+'%</b></span>'+
+    '<span class="stat">PICK <b>'+r.meta.pr+'%</b></span>';
+  card.appendChild(stats);
+  const bar=document.createElement('div'); bar.className='bar'; const i=document.createElement('i');
+  i.style.width=(r.score>0?Math.max(6,Math.round(100*r.score/maxScore)):4)+'%'; bar.appendChild(i); card.appendChild(bar);
+  card.appendChild(whyList(r));
+  return card;
+}
+function renderResults(){
+  const {scored,enemyCount}=recommend();
+  document.getElementById('recRole').textContent=state.myRole+(state.map?' · '+state.map:'');
+  const body=document.getElementById('recBody'); body.innerHTML='';
+  if(enemyCount===0){const h=document.createElement('div');h.className='hint';h.textContent='Add the enemy team to unlock counter analysis. For now picks are weighted only by S3 meta + map + your team synergy.';body.appendChild(h);}
+  if(!scored.length){const h=document.createElement('div');h.className='hint';h.textContent='Every '+state.myRole+' hero is already picked on one of the teams.';body.appendChild(h);return;}
+  const maxScore=Math.max(1,scored[0].score);
+  scored.slice(0,3).forEach((r,i)=>body.appendChild(recCard(r,i+1,maxScore)));
+  if(scored.length>3){
+    const more=document.createElement('div'); more.className='more'; more.textContent='▸ SHOW ALL '+scored.length+' '+state.myRole.toUpperCase();
+    const rest=document.createElement('div'); rest.className='rest'; rest.style.display='none';
+    scored.slice(3).forEach((r,i)=>{
+      const row=document.createElement('div'); row.className='row';
+      row.innerHTML='<span class="rank">#'+(i+4)+'</span>'+
+        '<span class="tinytier t'+r.meta.tier+'">'+r.meta.tier+'</span>'+
+        '<span class="nm">'+r.hero+(r.reasons[0]?' — '+r.reasons[0].replace(/\.$/,''):'')+'</span>'+
+        '<span class="wr">'+r.meta.wr+'%</span>'+
+        '<span class="match">'+(r.score>0?'+':'')+r.score+'</span>';
+      rest.appendChild(row);
+    });
+    more.onclick=()=>{const open=rest.style.display==='none';rest.style.display=open?'block':'none';more.textContent=open?'▾ HIDE EXTRA':'▸ SHOW ALL '+scored.length+' '+state.myRole.toUpperCase();};
+    body.append(more,rest);
+  }
+}
+function renderAll(){renderTeams();renderResults();}
+
+/* ============================================================ PICKER */
+function openPicker(team,idx){
+  picker={team,idx}; document.getElementById('search').value='';
+  document.getElementById('modal').classList.add('open'); renderPickList('');
+  setTimeout(()=>document.getElementById('search').focus(),50);
+}
+function closePicker(){document.getElementById('modal').classList.remove('open');picker=null;}
+function renderPickList(q){
+  const wrap=document.getElementById('pickList'); wrap.innerHTML='';
+  const used=taken(), cur=picker?state[picker.team][picker.idx].hero:null, ql=q.trim().toLowerCase();
+  if(cur){const rm=document.createElement('button');rm.className='hbtn';rm.style.borderLeftColor='var(--muted)';rm.innerHTML='<span style="color:var(--muted)">✕ CLEAR SLOT ('+cur+')</span>';rm.onclick=()=>{state[picker.team][picker.idx].hero=null;closePicker();renderAll();};wrap.appendChild(rm);}
+  ['Tank','Damage','Support'].forEach(role=>{
+    const heroes=Object.keys(HEROES).filter(h=>HEROES[h].role===role&&(!ql||h.toLowerCase().includes(ql)))
+      .sort((a,b)=>HEROES[b].meta.wr-HEROES[a].meta.wr);
+    if(!heroes.length)return;
+    const g=document.createElement('div');g.className='grp';g.textContent=role;wrap.appendChild(g);
+    heroes.forEach(h=>{
+      const M=HEROES[h], dis=used.has(h)&&h!==cur;
+      const b=document.createElement('button'); b.className='hbtn role-'+role; b.disabled=dis;
+      b.innerHTML='<span>'+h+'</span>'+(M.new?'<span class="nw">NEW</span>':'')+
+        '<span class="sp">'+(dis?'<span class="wr">picked</span>':'<span class="wr">'+M.meta.wr+'%</span><span class="htier t'+M.meta.tier+'">'+M.meta.tier+'</span>')+'</span>';
+      b.onclick=()=>{state[picker.team][picker.idx].hero=h;closePicker();renderAll();};
+      wrap.appendChild(b);
+    });
+  });
+}
+
+/* ============================================================ WIRING */
+function buildMapSelect(){
+  const sel=document.getElementById('map');
+  sel.innerHTML='<option value="">ANY MAP / NOT SURE</option>';
+  const modes=['Control','Escort','Hybrid','Push','Flashpoint','Clash'];
+  modes.forEach(mode=>{
+    const og=document.createElement('optgroup'); og.label=mode;
+    Object.keys(MAPS).filter(m=>MAPS[m].mode===mode).sort().forEach(m=>{
+      const o=document.createElement('option'); o.value=m; o.textContent=m; og.appendChild(o);
+    });
+    sel.appendChild(og);
+  });
+  sel.onchange=()=>{state.map=sel.value;renderResults();};
+}
+function setFormat(f){
+  if(f===state.fmt)return; const old=state; state.fmt=f;
+  ['enemy','mine'].forEach(team=>{
+    const prev=old[team].filter(s=>s.hero); const fresh=SLOTS[f].map(r=>({role:r,hero:null}));
+    fresh.forEach(slot=>{const m=prev.findIndex(p=>p.role===slot.role); if(m>-1){slot.hero=prev[m].hero;prev.splice(m,1);}});
+    state[team]=fresh;
+  });
+  document.querySelectorAll('#fmt button').forEach(b=>b.classList.toggle('on',b.dataset.f===f));
+  renderAll();
+}
+document.querySelectorAll('#fmt button').forEach(b=>b.onclick=()=>setFormat(b.dataset.f));
+document.querySelectorAll('#role button').forEach(b=>b.onclick=()=>{state.myRole=b.dataset.r;document.querySelectorAll('#role button').forEach(x=>x.classList.toggle('on',x===b));renderResults();});
+document.getElementById('closeModal').onclick=closePicker;
+document.getElementById('modal').onclick=(e)=>{if(e.target.id==='modal')closePicker();};
+document.getElementById('search').oninput=(e)=>renderPickList(e.target.value);
+
+buildMapSelect();
+renderAll();
+</script>
+</body>
+</html>
